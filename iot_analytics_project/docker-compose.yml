@@ -1,0 +1,182 @@
+version: '3'
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.9.1
+    # to survive the container restart
+    tmpfs: "/zktmp"
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: 'yes'
+    ports:
+      - "2181:2181"
+    networks:
+      - iot_project_network
+
+  kafka1:
+    image: bitnami/kafka:3.7.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://0.0.0.0:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka1:9092,EXTERNAL://localhost:29092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # optional - enable topic auto create
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      ALLOW_PLAINTEXT_LISTENER: 'yes'
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    volumes:
+      - kafka_data1:/bitnami/kafka
+    networks:
+      - iot_project_network
+
+  kafka2:
+    image: bitnami/kafka:3.7.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: INTERNAL://:9093,EXTERNAL://0.0.0.0:29093
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka2:9093,EXTERNAL://localhost:29093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # optional - enable topic auto create
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      ALLOW_PLAINTEXT_LISTENER: 'yes'
+    ports:
+      - "9093:9093"
+      - "29093:29093"
+    volumes:
+      - kafka_data2:/bitnami/kafka
+    networks:
+      - iot_project_network
+
+  kafka3:
+    image: bitnami/kafka:3.7.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: INTERNAL://:9094,EXTERNAL://0.0.0.0:29094
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka3:9094,EXTERNAL://localhost:29094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # optional - enable topic auto create
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      ALLOW_PLAINTEXT_LISTENER: 'yes'
+    ports:
+      - "9094:9094"
+      - "29094:29094"
+    volumes:
+      - kafka_data3:/bitnami/kafka
+    networks:
+      - iot_project_network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9093,kafka3:9094
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - iot_project_network
+
+  kafka-data-generator:
+    container_name: data_generator
+    build:
+      context: ./data_generation  # Path to the module containing the Dockerfile
+      dockerfile: Dockerfile  # (Optional) Explicitly name the Dockerfile if needed
+    environment:
+      PYTHONUNBUFFERED: 1
+    networks:
+      - iot_project_network
+    volumes:
+      - ./data_generation:/app  # Mount data_generation into the container
+    command: python generate_data.py  # Run your script
+
+  data-forwarder:
+    container_name: forwarder
+    build:
+      context: ./forwarder  # Path to the module containing the Dockerfile
+      dockerfile: Dockerfile  # (Optional) Explicitly name the Dockerfile if needed
+    environment:
+      PYTHONUNBUFFERED: 1
+    networks:
+      - iot_project_network
+    volumes:
+      - ./forwarder:/app  # Mount data_generation into the container
+    command: python data_forwarder.py  # Run your script
+
+  dashboard:
+    container_name: dashboard
+    build:
+      context: ./dashboard  # Path to the module containing the Dockerfile
+      dockerfile: Dockerfile  # (Optional) Explicitly name the Dockerfile if needed
+    environment:
+      PYTHONUNBUFFERED: 1
+    networks:
+      - iot_project_network
+    volumes:
+      - ./dashboard:/app  # Mount data_generation into the container
+    command: streamlit run visualize_data.py  # Run your script
+
+  questdb:
+    image: questdb/questdb:latest
+    container_name: questdb
+    ports:
+      - "9000:9000"  # Web console
+      - "8812:8812"  # Influx line protocol
+      - "9009:9009"  # Postgres wire protocol
+    volumes:
+      - questdb-data:/root/.questdb/db
+    networks:
+      - iot_project_network
+    environment:
+      - QDB_PG_ENABLED=true
+      - QDB_HTTP_PORT=9000
+      - QDB_QUERY_PORT=9001
+
+  api:
+    container_name: api
+    build:
+      context: ./api
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=questdb  # The name of the QuestDB service
+      - DB_PORT=8812     # PostgreSQL-compatible port
+      - DB_USER=admin     # Default user for QuestDB
+      - DB_PASSWORD=quest # Default password for QuestDB
+      - DB_NAME=questdb   # Database name if needed (default is "questdb")
+    networks:
+      - iot_project_network
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/app
+    command: python main.py
+
+
+networks:
+  iot_project_network:
+    driver: bridge
+
+
+volumes:
+  kafka_data1:
+    driver: local
+  kafka_data2:
+    driver: local
+  kafka_data3:
+    driver: local
+  questdb-data:

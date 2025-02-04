@@ -1,0 +1,5 @@
+fastapi==0.115.6
+loguru==0.7.3
+asyncpg==0.30.0
+uvicorn==0.34.0
+httpx==0.28.1

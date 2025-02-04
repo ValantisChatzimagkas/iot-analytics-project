@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "iot-analytics-project"
+version = "0.1.0"
+description = ""
+authors = ["valantis <vhatzimagkas@f-in.eu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.6"
+loguru = "^0.7.3"
+asyncpg = "^0.30.0"
+uvicorn = "^0.34.0"
+numpy = "^2.2.1"
+pandas = "^2.2.3"
+quixstreams = "^3.6.1"
+httpx = "^0.28.1"
+streamlit = "^1.41.1"
+adtk = "^0.6.2"
+plotly = "^5.24.1"
+seaborn = "^0.13.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
