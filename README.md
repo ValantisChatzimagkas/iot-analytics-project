@@ -35,7 +35,7 @@ the selected device.
 # Dashboard Demo:
 
 ### Step 1 - Select Device
-When selectin a dive you will immediately see the line plots for electrical current and voltage
+When selecting a dive you will immediately see the line plots for electrical current and voltage
 ![img_1.png](screenshots/img_1.png)
 
 ### Step 1.1 - View statistics
