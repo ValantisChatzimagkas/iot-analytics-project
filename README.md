@@ -12,7 +12,7 @@ the selected device.
 &nbsp;
 
 ### Here is an abstract view of the project
-![img.png](screenshots/img.png)
+![img.png](screenshots/img.png)![img.png](screenshots/img.png)
 
 ## How It Works
 
